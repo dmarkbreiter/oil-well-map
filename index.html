@@ -1,0 +1,49 @@
+<html>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+      <title>ArcGIS API for JavaScript Tutorials: Display a map</title>
+  
+      <style>
+        html,
+        body,
+        h2 {
+          line-height: 1.5rem;
+        }
+        #viewDiv {
+          padding: 0;
+          margin: 0;
+          height: 100%;
+          width: 100%;
+        }
+        #results {
+          opacity:0;
+          transition: all ease-in 0.75s;
+          padding:10px 30px 20px 30px;
+          z-index: 100;
+        }
+        .esri-widget, .esri-widget--button, .esri-legend__service {
+          background-color: rgba(255,255,255,0.75) !important;
+          backdrop-filter: blur(8px) !important;
+          -webkit-backdrop-filter: blur(8px) !important;
+          border-radius: 3px !important;
+        }
+      </style>
+  
+    </head>
+    <body>
+      <div id="viewDiv">
+        <div id="results" class="esri-widget">
+          <h2>Oil wells within 1 mile of <br> <span id="location"></span>:</h2>
+          <p><b>New wells:</b><span id="newWells"></span></p>
+          <p><b>Active wells:</b><span id="activeWells"></span></p>
+          <p><b>Idle wells:</b><span id="idleWells"></span></p>
+          <p><b>Plugged wells:</b><span id="pluggedWells"></span></p>
+        </div>
+      </div>
+        <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/light/main.css">
+        <script src="https://js.arcgis.com/4.20/"></script>
+        <script src="script.js"></script>
+    </body>
+</html>
+  
