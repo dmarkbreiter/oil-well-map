@@ -43,9 +43,9 @@ require([
       const height = window.screen.height;
       const resolution = height * width;
       if (resolution > 700000) {
-        return 700000 + (1000000 - resolution/2) * 0.75;
+        return 900000 + (1000000 - resolution/2) * 0.75;
       } else {
-        return 700000 + (1000000 - resolution/2);
+        return 900000 + (1000000 - resolution/2);
       }
     }
 
@@ -56,7 +56,7 @@ require([
       constraints: {
         snapToZoom: false,
         rotationEnabled: false,
-        minZoom: 9, // Maximum zoom "out"
+        minZoom: 8, // Maximum zoom "out"
       },
       container:'viewDiv'
     });
