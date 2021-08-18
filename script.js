@@ -1,5 +1,4 @@
 require([
-  "esri/config",
   "esri/Map",
   "esri/views/MapView",
   "esri/layers/FeatureLayer",
@@ -7,13 +6,10 @@ require([
   "esri/geometry/geometryEngine",
   'esri/Graphic',
   'esri/layers/GraphicsLayer',
-  "esri/widgets/Search/SearchViewModel",
-  "esri/PopupTemplate",
   "esri/widgets/Legend",
-  "esri/renderers/UniqueValueRenderer",
   "esri/widgets/Expand",
+  "esri/widgets/Slider",
 ], (
-  esriConfig,
   Map, 
   MapView,
   FeatureLayer,
@@ -21,11 +17,9 @@ require([
   geometryEngine,
   Graphic,
   GraphicsLayer,
-  SearchVM,
-  PopupTemplate,
   Legend,
-  UniqueValueRenderer,
   Expand,
+  Slider,
 ) => {
   setUpMap();
 
@@ -125,12 +119,14 @@ require([
     const bufferLayer = new GraphicsLayer();
     map.add(bufferLayer);
 
-    // Add components to view UI
+    // Add Search widget
     const searchWidget = new Search({
       view:view,
       resultGraphicEnabled: true,
       popupEnabled: true,
     });
+    
+    // Add Legend widget
     const legend = new Legend({
       view: view,
       layerInfos: [{
@@ -138,6 +134,8 @@ require([
         title: "Legend"
       }]
     });
+
+    // Add Expand option for legend when screen is small enough
     const legendExpand = new Expand({
       expandIconClass: "esri-icon-layer-list",  // see https://developers.arcgis.com/javascript/latest/guide/esri-icon-font/
       // expandTooltip: "Expand LayerList", // optional, defaults to "Expand" for English locale
@@ -150,6 +148,18 @@ require([
     });
     view.ui.move('zoom', 'top-right');
     view.ui.add('results', 'bottom-left');
+
+    // Add Slider widget
+    const slider = new Slider({
+      container: 'slider',
+      min: 1,
+      max: 50,
+      values: [1], // The default value of the slider
+      precision: 2,
+      rangeLabelsVisible: true
+    })
+
+    // Change format if using on small screen
     if (window.screen.height < 1024 || window.screen.width < 1024) {
       view.ui.add(legendExpand, 'bottom-right');
     } else {
@@ -157,45 +167,62 @@ require([
     }
 
 
-    // Define functions 
+
+    /* DEFINE FUNCTIONS */
 
     // Spatially query well feature layer with buffer polygon set as input query geometry
-    function queryWells(polygon){
-      const query = {
+    function queryWells(polygon) {
+      // Construct query object for query statistics
+      const statsQuery = {
+        groupByFieldsForStatistics: ['WellStatus'],
+        outStatistics: [{
+          onStatisticField: "wellStatus",
+          outStatisticFieldName: "wellCount",
+          statisticType: "count"
+        }],
+        where: "[*]",
         geometry: polygon,
-        spatialRelationship: 'contains',
-        outFields: ['WellStatus'],
+        spatialRelationship: 'contains'
       }
-      oilWellsLayer.queryFeatures(query).then((results) => {
-        const features = results.features;
-        displayWellCounts(features);
+      // Query the oils well layer with stats query
+      oilWellsLayer.queryFeatures(statsQuery).then((results)=> {
+        // Create well stats object based on results
+        var wellStats = {'Total':0};
+        results.features.forEach(stat => {
+          wellStats[stat.attributes.WellStatus] = stat.attributes.wellCount;
+          wellStats['Total'] += stat.attributes.wellCount;
+        });
+        // Populate DOM with results from query
+        displayWellCounts(wellStats);
       });
     }
 
     // Calculates count of well types in buffer polygon
-    function displayWellCounts(results){
+    function displayWellCounts(stats){
       document.getElementById('results').style.opacity=1;
-      const countNewWells = ` ${results.filter(r => r.attributes['WellStatus']==='New').length}`;
-      const countPluggedWells = ` ${results.filter(r => r.attributes['WellStatus']==='Plugged').length}`;
-      const countIdleWells = ` ${results.filter(r => r.attributes['WellStatus']==='Idle').length}`;
-      const countActiveWells = ` ${results.filter(r => r.attributes['WellStatus']==='Active').length}`;
-      document.getElementById('newWells').innerHTML = countNewWells;
-      document.getElementById('activeWells').innerHTML = countActiveWells;
-      document.getElementById('idleWells').innerHTML = countIdleWells;
-      document.getElementById('pluggedWells').innerHTML = countPluggedWells;
+      //const totalWells = `${results.length}`;
+      function returnCount(wellType) {
+        return (wellType in stats) ? stats[wellType] : 0;
+      }
+      document.getElementById('totalWells').innerHTML = stats['Total'];
+      document.getElementById('newWells').innerHTML = returnCount('New');
+      document.getElementById('activeWells').innerHTML = returnCount('Active');
+      document.getElementById('idleWells').innerHTML = returnCount('Idle');
+      document.getElementById('pluggedWells').innerHTML = returnCount('Plugged');
     }
 
-    // Event handler for search widget
-    searchWidget.viewModel.on('search-complete', function(event){
 
+    let searchGeometry;
+
+    // Event handler for search widget
+    searchWidget.viewModel.on('search-complete', (event) => {
       // Remove buffer polygon before other polygons are added
       bufferLayer.graphics.removeAll();
-
       // Add search result address to results div
       document.getElementById('location').innerHTML = event.results[0].results[0].feature.attributes.Match_addr;
 
       // Get search geometry and create buffer
-      const searchGeometry = event.results[0].results[0].feature.geometry;
+      searchGeometry = event.results[0].results[0].feature.geometry;
       const buffer = geometryEngine.geodesicBuffer(searchGeometry, 1, 'miles');
 
       // Override default search widget zoom to result
@@ -204,7 +231,7 @@ require([
         duration: 550,
         ease: 'ease'
       }
-      searchWidget.goToOverride = view.goTo(buffer.extent.expand(2), goToOptions);
+      searchWidget.goToOverride = view.goTo(buffer.extent.expand(2.5).offset(0,-1000), goToOptions);
 
       // Create buffer graphic polygon and add to bufferLayer
       const bufferGraphic = new Graphic({
@@ -225,5 +252,18 @@ require([
       queryWells(buffer);
 
     });
+
+    // Event handler for slider
+    slider.on("thumb-drag", (e)=> {
+      document.getElementById('bufferRadius').innerHTML = e.value;
+      // Create new buffer geometry based on slider value
+      const newBufferGeometry = geometryEngine.geodesicBuffer(searchGeometry, e.value, 'miles');
+      // Update buffer graphic with new radius
+      bufferLayer.graphics.getItemAt(0).geometry = newBufferGeometry;
+      // Change view extent to fit buffer geometry with goTo
+      view.goTo(newBufferGeometry.extent.expand(2.5).offset(0,-1500));
+      // Query features using new buffer geometry
+      queryWells(newBufferGeometry);
+    })
   }
 });

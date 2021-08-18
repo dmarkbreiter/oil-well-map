@@ -34,12 +34,16 @@
     <body>
       <div id="viewDiv">
         <div id="results" class="esri-widget">
-          <h2>Oil wells within 1 mile of <br> <span id="location"></span>:</h2>
-          <p><b>New wells:</b><span id="newWells"></span></p>
-          <p><b>Active wells:</b><span id="activeWells"></span></p>
-          <p><b>Idle wells:</b><span id="idleWells"></span></p>
-          <p><b>Plugged wells:</b><span id="pluggedWells"></span></p>
+          <h2>There are <span id="totalWells"></span> oil wells within <span id="bufferRadius">1</span> mile(s) of 
+            <br> <span id="location"></span>
+          </h2>
+          <p><b>New wells: </b><span id="newWells"></span></p>
+          <p><b>Active wells: </b><span id="activeWells"></span></p>
+          <p><b>Idle wells: </b><span id="idleWells"></span></p>
+          <p><b>Plugged wells: </b><span id="pluggedWells"></span></p>
+          <div id="slider"></div>
         </div>
+
       </div>
         <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/light/main.css">
         <script src="https://js.arcgis.com/4.20/"></script>
