@@ -9,6 +9,7 @@ require([
   "esri/widgets/Legend",
   "esri/widgets/Expand",
   "esri/widgets/Slider",
+  "esri/tasks/Locator"
 ], (
   Map, 
   MapView,
@@ -20,6 +21,7 @@ require([
   Legend,
   Expand,
   Slider,
+  Locator
 ) => {
   setUpMap();
 
@@ -50,7 +52,14 @@ require([
       constraints: {
         snapToZoom: false,
         rotationEnabled: false,
-        minZoom: 8, // Maximum zoom "out"
+        geometry: {
+          type: "extent",
+          xmin: -121.5,
+          ymin:  32.7,
+          xmax: -114.7,
+          ymax:  41.0
+        },
+        minZoom: 7, // Maximum zoom "out"
       },
       container:'viewDiv'
     });
@@ -124,6 +133,14 @@ require([
       view:view,
       resultGraphicEnabled: true,
       popupEnabled: true,
+      sources: [{
+        locator: new Locator({
+           url: "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer"
+        }),
+        placeholder: "Search",
+        maxResults: 3,
+        filter: {geometry:view.constraints.geometry,}
+      }],
     });
     
     // Add Legend widget
