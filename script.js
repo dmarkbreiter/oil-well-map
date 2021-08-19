@@ -130,17 +130,23 @@ require([
 
     // Add Search widget
     const searchWidget = new Search({
+      includeDefaultSources: false,
       view:view,
-      resultGraphicEnabled: true,
-      popupEnabled: true,
-      sources: [{
-        locator: new Locator({
-           url: "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer"
-        }),
-        placeholder: "Search",
-        maxResults: 3,
-        filter: {geometry:view.constraints.geometry,}
-      }],
+      sources: [
+        {
+          locator: new Locator({
+            url: "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer",
+          }),
+          placeholder: "Search",
+          outFields: ['Match_addr', 'Addr_type'],
+          singleLineFieldName: "SingleLine", // Required for search to return results for impartial search terms
+          name: "ArcGIS World Geocoding Service",
+          filter: {
+            geometry: view.constraints.geometry,
+          },
+
+        },
+      ],
     });
     
     // Add Legend widget
@@ -172,8 +178,12 @@ require([
       min: 1,
       max: 50,
       values: [1], // The default value of the slider
-      precision: 2,
-      rangeLabelsVisible: true
+      precision: 1,
+      rangeLabelsVisible: true,
+      visibleElements: {
+        rangeLabels: true,
+        labels: true
+      }
     })
 
     // Change format if using on small screen
@@ -199,8 +209,9 @@ require([
         }],
         where: "[*]",
         geometry: polygon,
-        spatialRelationship: 'contains'
+        outFields: ["*"]
       }
+
       // Query the oils well layer with stats query
       oilWellsLayer.queryFeatures(statsQuery).then((results)=> {
         // Create well stats object based on results
@@ -236,7 +247,8 @@ require([
       // Remove buffer polygon before other polygons are added
       bufferLayer.graphics.removeAll();
       // Add search result address to results div
-      document.getElementById('location').innerHTML = event.results[0].results[0].feature.attributes.Match_addr;
+      console.log(event.results[0].results[0])
+      document.getElementById('location').innerHTML = event.results[0].results[0].name;
 
       // Get search geometry and create buffer
       searchGeometry = event.results[0].results[0].feature.geometry;
