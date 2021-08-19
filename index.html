@@ -18,9 +18,11 @@
         }
         #results {
           opacity:0;
-          transition: all ease-in 0.75s;
+          transition: all ease-in 0.5s;
           padding:10px 30px 20px 30px;
           z-index: 100;
+          width: 50vw;
+          max-width: 40rem;
         }
 
         #slider {
@@ -41,7 +43,7 @@
     <body>
       <div id="viewDiv">
         <div id="results" class="esri-widget">
-          <h2>There are <span id="totalWells"></span> oil wells within  <br> 
+          <h2>There are <span id="totalWells"></span> oil wells within 
             <span id="bufferRadius">1</span> mile(s) of <span id="location"></span>
           </h2>
           <p><b>New wells: </b><span id="newWells"></span></p>
