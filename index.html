@@ -7,9 +7,6 @@
       <style>
         html,
         body,
-        h2 {
-          line-height: 1.5rem;
-        }
         #viewDiv {
           padding: 0;
           margin: 0;
@@ -17,12 +14,42 @@
           width: 100%;
         }
         #results {
-          opacity:0;
-          transition: all ease-in 0.5s;
+          position:relative;
+          display: none;
           padding:10px 30px 20px 30px;
           z-index: 100;
           width: 50vw;
-          max-width: 40rem;
+          max-width: 35rem;
+          min-width: 25rem;
+        }
+
+        h1 {
+          margin-bottom: 0px;
+        }
+
+        h2 {
+          margin-top: 0.65em;
+          line-height: 1.25;
+          font-weight: 400;
+        }
+
+        #bufferRadius {
+          font-weight: 600;
+        }
+
+        .results-circle {
+          display: inline-block !important;
+          padding-right: 7px;
+        }
+
+        .close-button {
+          position: absolute;
+          top:0%;
+          right: 0%;
+          border: none;
+          background-color: transparent !important;
+          border-radius: 4px !important;
+          color: #6e6e6e;
         }
 
         #slider {
@@ -31,32 +58,112 @@
           -webkit-backdrop-filter: blur(0px) !important;
           margin-top: 2rem;
         }
-        .esri-widget, .esri-widget--button {
-          background-color: rgba(255,255,255,0.75) !important;
-          backdrop-filter: blur(15px) !important;
-          -webkit-backdrop-filter: blur(15px) !important;
+
+        .esri-feature-content {
+          line-height: 1.85em;
+        }
+
+        .esri-popup, .esri-popup__feature-menu {
+          border-radius: 4px !important;
+        } 
+      
+        .esri-search__suggestions-menu {
+          background-color: rgba(255,255,255,0.7) !important;
           border-radius: 4px !important;
         }
+
+        .esri-popup__pointer-direction {
+          backdrop-filter: blur(20px) !important;
+          -webkit-backdrop-filter: blur(20px) !important;
+          background-color: rgba(255,255,255,0.7) !important;
+        }
+
+        .esri-search__suggestions-list {
+          backdrop-filter: blur(20px) !important;
+          -webkit-backdrop-filter: blur(20px) !important;
+        }
+
+        .close-button:hover {
+          background-color: rgb(240,240,240) !important;
+        }
+
+        .esri-widget {
+          background-color: rgba(255,255,255,0.7) !important;
+          backdrop-filter: blur(20px) !important;
+          -webkit-backdrop-filter: blur(20px) !important;
+          border-radius: 4px !important;
+        }
+
+        .esri-search__input, .esri-widget--button {
+          border-radius: 4px !important;
+          background-color: transparent !important;
+          backdrop-filter: blur(0px) !important;
+          -webkit-backdrop-filter: blur(0px) !important;
+        }
+
+        .esri-search__submit-button,  {
+          border-radius: 0px 4px 4px 0px !important;
+        }
+
+        .esri-zoom .esri-widget--button:last-child {
+          border-top: solid 1px rgba(110,110,110,.3);
+          border-radius: 0px 0px 4px 4px !important;
+        }
+
+        .esri-feature {
+          backdrop-filter: blur(0px) !important;
+          background-color: transparent !important;
+        }
+        @media (max-width: 600px) {
+          #results {
+            width: 100vw;
+            min-width: 0px;
+            margin: 0px;
+          }
+          .esri-popup__main-container {
+            width: 100% !important;
+          }
+          .esri-legend__service {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px) !important;
+            background-color: rgba(255,255,255,0.5) !important;
+          }
+        }
+
       </style>
   
     </head>
     <body>
       <div id="viewDiv">
         <div id="results" class="esri-widget">
-          <h2>There are <span id="totalWells"></span> oil wells within 
-            <span id="bufferRadius">1</span> mile(s) of <span id="location"></span>
+          <button class="esri-icon-close close-button esri-widget--button" style="position:absolute"></button>
+          <h1><span id="totalWells"></span> oil wells</h1>
+          <h2>within 
+            <span id="bufferRadius">1 mile</span> of <span id="location"></span>
           </h2>
-          <p><b>New wells: </b><span id="newWells"></span></p>
-          <p><b>Active wells: </b><span id="activeWells"></span></p>
-          <p><b>Idle wells: </b><span id="idleWells"></span></p>
-          <p><b>Plugged wells: </b><span id="pluggedWells"></span></p>
+          <!-- <p><b>New wells: </b><span id="newWells"></span></p> -->
+          <p>
+            <div class="results-circle esri-legend__symbol"><div style="opacity: 1;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><defs></defs><g transform="matrix(1,0,0,1,5,5)"><circle fill="rgba(0, 255, 0, 0.65)" fill-rule="evenodd" stroke="none" stroke-width="1" stroke-linecap="butt" stroke-linejoin="4" stroke-dasharray="none" stroke-miterlimit="4" cx="0" cy="0" r="4.666666666666667"></circle></g></svg></div></div>         
+            <b> Active wells: </b>
+            <span id="activeWells"></span>
+          </p>
+          <p>
+            <div class="results-circle esri-legend__symbol"><div style="opacity: 1;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><defs></defs><g transform="matrix(1,0,0,1,5,5)"><circle fill="rgba(244, 244, 0, 0.85)" fill-rule="evenodd" stroke="none" stroke-width="1" stroke-linecap="butt" stroke-linejoin="4" stroke-dasharray="none" stroke-miterlimit="4" cx="0" cy="0" r="4.666666666666667"></circle></g></svg></div></div>         
+            <b>Idle wells: </b>
+            <span id="idleWells"></span>
+          </p>
+          <p>
+            <div class="results-circle esri-legend__symbol"><div style="opacity: 1;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><defs></defs><g transform="matrix(1,0,0,1,5,5)"><circle fill="rgba(200, 200, 200, 0.25)" fill-rule="evenodd" stroke="none" stroke-width="1" stroke-linecap="butt" stroke-linejoin="4" stroke-dasharray="none" stroke-miterlimit="4" cx="0" cy="0" r="4.666666666666667"></circle></g></svg></div></div>         
+            <b>Plugged wells: </b>
+            <span id="pluggedWells"></span>
+          </p>
           <p>Change distance:</p>
           <div id="slider"></div>
         </div>
 
       </div>
         <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/light/main.css">
-        <script src="https://js.arcgis.com/4.20/"></script>
+        <script src="https://js.arcgis.com/4.22/"></script>
         <script src="script.js"></script>
     </body>
 </html>

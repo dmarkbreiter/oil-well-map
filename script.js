@@ -9,7 +9,7 @@ require([
   "esri/widgets/Legend",
   "esri/widgets/Expand",
   "esri/widgets/Slider",
-  "esri/tasks/Locator"
+  "esri/tasks/Locator",
 ], (
   Map, 
   MapView,
@@ -21,13 +21,16 @@ require([
   Legend,
   Expand,
   Slider,
-  Locator
+  Locator,
+
 ) => {
   setUpMap();
 
 
   // Set up map, map view and add necessary feature layers
   function setUpMap() {
+
+    var oilWellsViewLayer, highlight, searchGeometry;
 
     // Set up map and view
     const map = new Map({
@@ -47,7 +50,7 @@ require([
 
     const view = new MapView({
       map: map,
-      center: [-118.215, 34.225], // Longitude, latitude
+      center: [-118.25, 33.98], // Longitude, latitude
       scale: returnScale(),
       constraints: {
         snapToZoom: false,
@@ -68,22 +71,10 @@ require([
     const symbolSize = 7;
     const oilWellRenderer = {
       type: 'unique-value',
-      field: 'WellStatus',
-      defaultSymbol: {
-        type: "simple-marker",
-        size: symbolSize,
-      },
+      valueExpression: `When($feature.WellStatus == 'Idle', 'Idle',$feature.WellStatus == 'New' || $feature.WellStatus == 'Active', 'Active', $feature.WellStatus == 'Plugged', 'Plugged', null)`,
+      //field: 'WellStatus',
+      defaultSymbol: null,
       uniqueValueInfos: [{
-        value: 'New',
-        symbol: {
-          type: 'simple-marker',
-          size: symbolSize,
-          color: [255, 0, 0, 0.65],
-          outline: {
-            width:0
-          }
-        }
-      },{
         value: 'Active',
         symbol: {
           type: 'simple-marker',
@@ -98,7 +89,7 @@ require([
         symbol: {
           type: 'simple-marker',
           size: symbolSize,
-          color: [255, 255, 0, 0.65],
+          color: [244, 244, 0, 0.85],
           outline: {
             width:0
           }
@@ -114,6 +105,15 @@ require([
           }
         }
       }]
+    };
+
+    view.popup.dockOptions =  {
+      position:"top-right",
+    };
+
+    const popup = {
+      title: "API: {API}",
+      "content": `<b>Well Status:</b> {WellStatus}<br><b>Drilling Start Date:</b> {SpudDate}<br><b>Operator Name:</b> {OperatorName}`,
     }
 
     // Add layer and add to map
@@ -123,8 +123,27 @@ require([
       renderer: oilWellRenderer,
       maxScale:0,
       minScale:0,
+      popupTemplate: popup,
+      definitionExpression: `WellStatus IN ('Active', 'New', 'Plugged', 'Idle')`,
+      outFields: ["API", "WellStatus", "OperatorName", "SpudDate"],
     });
+
+    oilWellsLayer.orderBy = [{
+      valueExpression: `When($feature.WellStatus == 'Idle', 1, $feature.WellStatus == 'New' || $feature.WellStatus == 'Active', 0, $feature.WellStatus == 'Plugged', 2, 3)`,
+      //order: "ascending"
+    }];
+
+    oilWellsLayer.when(function() {
+
+      // get a reference the csvlayerview when it is ready. It will used to do
+      // client side queries when user draws polygon to select features
+      view.whenLayerView(oilWellsLayer).then(function(layerView) {
+        oilWellsViewLayer = layerView;
+      });
+    })
+
     map.add(oilWellsLayer);
+
     const bufferLayer = new GraphicsLayer();
     map.add(bufferLayer);
 
@@ -163,8 +182,11 @@ require([
       expandIconClass: "esri-icon-layer-list",  // see https://developers.arcgis.com/javascript/latest/guide/esri-icon-font/
       // expandTooltip: "Expand LayerList", // optional, defaults to "Expand" for English locale
       view: view,
-      content: legend
+      content: legend,
+      autoCollapse: false,
+      mode:'floating'
     });
+
     view.ui.add(searchWidget,{
       position: "top-left",
       index: 2,
@@ -175,8 +197,8 @@ require([
     // Add Slider widget
     const slider = new Slider({
       container: 'slider',
-      min: 1,
-      max: 50,
+      min: 0.1,
+      max: 10,
       values: [1], // The default value of the slider
       precision: 1,
       rangeLabelsVisible: true,
@@ -196,6 +218,21 @@ require([
 
 
     /* DEFINE FUNCTIONS */
+
+    // Highlight features that intersect with buffer
+    function highlightWells(geometry) {
+      if (highlight) {
+        highlight.remove();
+      }
+      const query = {
+        geometry: geometry
+      };
+      oilWellsViewLayer.queryFeatures(query).then((results) => {
+        highlight = oilWellsViewLayer.highlight(results.features);
+      });
+
+
+    }
 
     // Spatially query well feature layer with buffer polygon set as input query geometry
     function queryWells(polygon) {
@@ -223,44 +260,49 @@ require([
         // Populate DOM with results from query
         displayWellCounts(wellStats);
       });
+      highlightWells(polygon);
     }
 
     // Calculates count of well types in buffer polygon
     function displayWellCounts(stats){
-      document.getElementById('results').style.opacity=1;
+      if (view.width < 750) {
+        const legendWidget = document.getElementsByClassName('esri-legend')[0]
+        legendWidget.style.display = 'none';
+      }
+      results.style.display = 'block';
       //const totalWells = `${results.length}`;
       function returnCount(wellType) {
         return (wellType in stats) ? stats[wellType] : 0;
       }
-      document.getElementById('totalWells').innerHTML = stats['Total'];
-      document.getElementById('newWells').innerHTML = returnCount('New');
-      document.getElementById('activeWells').innerHTML = returnCount('Active');
+      document.getElementById('totalWells').innerHTML = stats['Total'].toLocaleString();
+      //document.getElementById('newWells').innerHTML = returnCount('New');
+      document.getElementById('activeWells').innerHTML = returnCount('Active') + returnCount('New');
       document.getElementById('idleWells').innerHTML = returnCount('Idle');
       document.getElementById('pluggedWells').innerHTML = returnCount('Plugged');
     }
 
-
-    let searchGeometry;
+      // Override default search widget zoom to result
+      var goToOptions = {
+        animate: true,
+        duration: 550,
+        ease: 'ease'
+      }
 
     // Event handler for search widget
     searchWidget.viewModel.on('search-complete', (event) => {
       // Remove buffer polygon before other polygons are added
       bufferLayer.graphics.removeAll();
+      // Get address
+      const address = event.results[0].results[0].name
       // Add search result address to results div
-      console.log(event.results[0].results[0])
-      document.getElementById('location').innerHTML = event.results[0].results[0].name;
+      document.getElementById('location').innerHTML = address.split(',')[0];
 
       // Get search geometry and create buffer
       searchGeometry = event.results[0].results[0].feature.geometry;
       const buffer = geometryEngine.geodesicBuffer(searchGeometry, 1, 'miles');
+      //oilWellsLayer.highlight(buffer);
 
-      // Override default search widget zoom to result
-      const goToOptions = {
-        animate: true,
-        duration: 550,
-        ease: 'ease'
-      }
-      searchWidget.goToOverride = view.goTo(buffer.extent.expand(2.5).offset(0,-1000), goToOptions);
+      searchWidget.goToOverride = view.goTo(buffer.extent.expand(2.5).offset(0,-2000), goToOptions);
 
       // Create buffer graphic polygon and add to bufferLayer
       const bufferGraphic = new Graphic({
@@ -279,20 +321,42 @@ require([
       
       // Query wells 
       queryWells(buffer);
-
     });
+
+
 
     // Event handler for slider
     slider.on("thumb-drag", (e)=> {
-      document.getElementById('bufferRadius').innerHTML = e.value;
+      //console.log(e.state);
+      document.getElementById('bufferRadius').innerHTML = (e.value == 1) ? '1 mile' : `${e.value} miles`;
       // Create new buffer geometry based on slider value
       const newBufferGeometry = geometryEngine.geodesicBuffer(searchGeometry, e.value, 'miles');
       // Update buffer graphic with new radius
       bufferLayer.graphics.getItemAt(0).geometry = newBufferGeometry;
-      // Change view extent to fit buffer geometry with goTo
-      view.goTo(newBufferGeometry.extent.expand(2.5).offset(0,-1500));
+      // Change view extent to fit buffer geometry with 'goTo'
+      const offsetFactor = e.value * -2500 
+      view.goTo(newBufferGeometry.extent.expand(2.5).offset(0, offsetFactor));
       // Query features using new buffer geometry
-      queryWells(newBufferGeometry);
-    })
+      if (e.state === 'stop') {
+        queryWells(newBufferGeometry);
+      }
+
+    });
+
+    // Event handler for close button
+    const closeButton = document.getElementsByClassName('close-button')[0];
+    closeButton.addEventListener('click', () => {
+      bufferLayer.graphics.removeAll();
+      const center = {
+        center: [-118.25, 33.98],
+        scale: returnScale(),
+      }
+      //view.goTo(center, goToOptions);
+      highlight.remove();
+      results.style.display = 'none';
+      const legendWidget = document.getElementsByClassName('esri-legend')[0]
+      legendWidget.style.display = 'block';
+    });
+
   }
 });
